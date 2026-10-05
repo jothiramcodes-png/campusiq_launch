@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Video } from '../../types';
-import { Clock, Play, FileText } from 'lucide-react';
+import { Clock, Play, FileText, Eye } from 'lucide-react';
 
 interface VideoCardProps {
   video: Video;
@@ -63,6 +63,11 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
           <span className="font-bold text-[#173B2F] text-[10px] bg-[#173B2F]/10 px-2 py-0.5 rounded-full shrink-0">
             {video.departmentCode}
           </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-2 font-medium">
+          <Eye className="w-3.5 h-3.5 text-blue-600" />
+          <span>{(video.viewCount || 0).toLocaleString()} {video.viewCount === 1 ? 'view' : 'views'}</span>
         </div>
 
         {/* Clean Action Row */}

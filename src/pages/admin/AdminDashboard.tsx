@@ -58,7 +58,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* KPI Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Stored Videos</div>
@@ -67,6 +67,19 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div className="w-12 h-12 rounded-2xl bg-[#173B2F]/10 text-[#173B2F] flex items-center justify-center">
             <Video className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Video Views</div>
+            <div className="text-3xl font-black text-[#17201C] mt-1">
+              {videos.reduce((sum, v) => sum + (v.viewCount || 0), 0).toLocaleString()}
+            </div>
+            <div className="text-[11px] text-blue-600 font-semibold mt-0.5">Student Engagements</div>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <Eye className="w-6 h-6" />
           </div>
         </div>
 
@@ -90,7 +103,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="text-2xl font-black text-[#17201C] mt-1">CSE & Engineering</div>
             <div className="text-[11px] text-gray-500 mt-0.5">NSCET Theni District</div>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center">
             <Sparkles className="w-6 h-6" />
           </div>
         </div>

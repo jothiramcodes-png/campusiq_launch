@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS videos (
     description TEXT,
     duration_seconds INT DEFAULT 120,
     tags JSON,
+    transcript JSON,
     view_count INT DEFAULT 0,
     is_bookmarked BOOLEAN DEFAULT FALSE,
     is_completed BOOLEAN DEFAULT FALSE,
@@ -242,43 +243,4 @@ VALUES
 ('dept_cse', 'Computer Science and Engineering', 'CSE', 'Dr. S. Karthik', 'hod.cse@nscet.org', 'Department of Computer Science & Engineering, NSCET Theni', 240, 18)
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
--- Seed Initial Local Videos Requested by User
-INSERT INTO videos (
-    id, local_video_path, title, topic, faculty_name, department_code, academic_year, 
-    thumbnail_url, description, duration_seconds, semester, subject_code, subject_title, unit_number, published_date
-) VALUES 
-(
-    'vid-local-01',
-    '/assets/videos/campusiq-01.mp4',
-    'federated learning',
-    'federated learning',
-    'asifa shereen CSE',
-    'CSE',
-    '2024-25',
-    'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60',
-    'Lecture on Federated Learning concepts, distributed machine learning architecture, and privacy-preserving model aggregation.',
-    240,
-    5,
-    'CS3551',
-    'Distributed & Federated Systems',
-    3,
-    '2026-09-01'
-),
-(
-    'vid-local-02',
-    '/assets/videos/campusiq-02.mp4',
-    'web request',
-    'web request',
-    'asmath nabila CSE',
-    'CSE',
-    '2024-25',
-    'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=60',
-    'Comprehensive walkthrough of HTTP/HTTPS web requests, client-server communication lifecycle, REST protocols, and response headers.',
-    217,
-    5,
-    'CS3452',
-    'Web Technology & Networks',
-    2,
-    '2026-09-02'
-)
-ON DUPLICATE KEY UPDATE title=VALUES(title);
+-- Initial Local Videos (Removed by user request)

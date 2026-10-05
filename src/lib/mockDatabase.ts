@@ -75,66 +75,7 @@ export const MOCK_DEPARTMENTS: Department[] = [
   }
 ];
 
-export const MOCK_VIDEOS: Video[] = [
-  {
-    id: 'vid_1',
-    youtubeId: '', // No youtube ID needed for local video
-    localVideoPath: '/assets/videos/campusiq-01.mp4',
-    title: 'federated learning',
-    description: 'An introductory lecture on federated learning, covering decentralized machine learning concepts and privacy-preserving data training.',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=80',
-    durationSeconds: 1500,
-    publishedDate: '2026-09-10',
-    departmentId: 'dept_cse',
-    departmentCode: 'CSE',
-    program: 'B.E. Computer Science & Engineering',
-    semester: 5,
-    academicYear: '2026-2027',
-    subjectCode: 'CS3501',
-    subjectTitle: 'Machine Learning',
-    unitNumber: 1,
-    topic: 'Federated Learning',
-    facultyName: 'asifa shereen CSE',
-    tags: ['Machine Learning', 'Federated Learning', 'CSE'],
-    viewCount: 150,
-    isBookmarked: false,
-    userProgressSeconds: 0,
-    isCompleted: false,
-    category: 'Core Software & Algorithms',
-    transcript: [
-      { id: 't1', startTime: 0, endTime: 1500, text: 'Welcome to this session on federated learning...' }
-    ]
-  },
-  {
-    id: 'vid_2',
-    youtubeId: '',
-    localVideoPath: '/assets/videos/campusiq-02.mp4',
-    title: 'web request',
-    description: 'A detailed overview of web requests, HTTP protocols, and client-server communication architectures.',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=800&auto=format&fit=crop&q=80',
-    durationSeconds: 2200,
-    publishedDate: '2026-09-11',
-    departmentId: 'dept_cse',
-    departmentCode: 'CSE',
-    program: 'B.E. Computer Science & Engineering',
-    semester: 6,
-    academicYear: '2026-2027',
-    subjectCode: 'CS3451',
-    subjectTitle: 'Web Technology',
-    unitNumber: 2,
-    topic: 'Web Requests',
-    facultyName: 'asmath nabila CSE',
-    tags: ['Web', 'HTTP', 'Networking', 'CSE'],
-    viewCount: 300,
-    isBookmarked: true,
-    userProgressSeconds: 0,
-    isCompleted: false,
-    category: 'Systems, Networks & Security',
-    transcript: [
-      { id: 't2', startTime: 0, endTime: 2200, text: 'In this session, we discuss how web requests function under the hood.' }
-    ]
-  }
-];
+export const MOCK_VIDEOS: Video[] = [];
 
 export const MOCK_FEEDBACK: Feedback[] = [];
 

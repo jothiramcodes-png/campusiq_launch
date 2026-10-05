@@ -1,83 +1,19 @@
 import { Video } from '../types';
+import { generateAutomaticTranscript } from './transcriptParser';
 
 const STORAGE_KEY = 'campusiq_uploaded_videos';
 
-export const DEFAULT_VIDEOS: Video[] = [
-  {
-    id: 'vid-local-01',
-    youtubeId: '',
-    localVideoPath: '/assets/videos/campusiq-01.mp4',
-    title: 'federated learning',
-    topic: 'federated learning',
-    facultyName: 'asifa shereen CSE',
-    departmentCode: 'CSE',
-    departmentId: 'dept_cse',
-    program: 'B.E',
-    semester: 5,
-    academicYear: '2024-25',
-    subjectCode: 'CS3551',
-    subjectTitle: 'Distributed & Federated Systems',
-    unitNumber: 3,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60',
-    description: 'Lecture on Federated Learning concepts, distributed machine learning architecture, and privacy-preserving model aggregation.',
-    durationSeconds: 240,
-    tags: ['Machine Learning', 'Federated Learning', 'Distributed AI'],
-    viewCount: 1420,
-    publishedDate: '2026-09-01',
-    category: 'Artificial Intelligence & Data Science'
-  },
-  {
-    id: 'vid-local-02',
-    youtubeId: '',
-    localVideoPath: '/assets/videos/campusiq-02.mp4',
-    title: 'web request',
-    topic: 'web request',
-    facultyName: 'asmath nabila CSE',
-    departmentCode: 'CSE',
-    departmentId: 'dept_cse',
-    program: 'B.E',
-    semester: 5,
-    academicYear: '2024-25',
-    subjectCode: 'CS3452',
-    subjectTitle: 'Web Technology & Networks',
-    unitNumber: 2,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=60',
-    description: 'Comprehensive walkthrough of HTTP/HTTPS web requests, client-server communication lifecycle, REST protocols, and response headers.',
-    durationSeconds: 217,
-    tags: ['Web Technology', 'HTTP', 'REST API', 'Computer Networks'],
-    viewCount: 1890,
-    publishedDate: '2026-09-02',
-    category: 'Systems, Networks & Security'
-  }
-];
+export const DEFAULT_VIDEOS: Video[] = [];
 
 // Helper to get local stored videos
 export const getLocalStoredVideos = (): Video[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_VIDEOS));
-      return DEFAULT_VIDEOS;
-    }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      // Auto-correct duration for local videos if outdated
-      let modified = false;
-      const corrected = parsed.map((v: Video) => {
-        if (v.id === 'vid-local-01' && v.durationSeconds === 1280) {
-          modified = true;
-          return { ...v, durationSeconds: 240 };
-        }
-        if (v.id === 'vid-local-02' && v.durationSeconds === 1450) {
-          modified = true;
-          return { ...v, durationSeconds: 217 };
-        }
-        return v;
-      });
-      if (modified) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(corrected));
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
       }
-      return corrected;
     }
   } catch (e) {
     console.error('Error reading localStorage videos:', e);
@@ -85,41 +21,30 @@ export const getLocalStoredVideos = (): Video[] => {
   return DEFAULT_VIDEOS;
 };
 
-// Helper to save videos permanently in localStorage
-export const saveVideosToLocalStorage = (videos: Video[]): void => {
+// Helper to save videos permanently in localStorage with change detection
+export const saveVideosToLocalStorage = (videos: Video[], forceDispatch = false): void => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
-    // Trigger custom event so all pages re-render instantly
-    window.dispatchEvent(new Event('campusiq_videos_updated'));
+    const prevRaw = localStorage.getItem(STORAGE_KEY);
+    const newRaw = JSON.stringify(videos);
+    if (prevRaw !== newRaw || forceDispatch) {
+      localStorage.setItem(STORAGE_KEY, newRaw);
+      // Trigger custom event so all pages re-render instantly in real time
+      window.dispatchEvent(new Event('campusiq_videos_updated'));
+    }
   } catch (e) {
     console.error('Error saving videos to localStorage:', e);
   }
 };
 
-// Fetch videos from backend MySQL API with automatic fallback to localStorage
+// Fetch videos directly from backend MySQL API and synchronize immediately with frontend state
 export const fetchAllVideos = async (): Promise<Video[]> => {
   try {
     const res = await fetch('/api/videos');
     if (res.ok) {
       const json = await res.json();
-      if (json && Array.isArray(json.data) && json.data.length > 0) {
-        // Merge with local storage to never lose locally cached videos
-        const local = getLocalStoredVideos();
-        const mergedMap = new Map<string, Video>();
-        
-        // Put database videos
-        for (const v of json.data) {
-          mergedMap.set(v.id, v);
-        }
-        // Put any local videos not in DB yet
-        for (const v of local) {
-          if (!mergedMap.has(v.id)) {
-            mergedMap.set(v.id, v);
-          }
-        }
-        const mergedList = Array.from(mergedMap.values());
-        saveVideosToLocalStorage(mergedList);
-        return mergedList;
+      if (json && Array.isArray(json.data)) {
+        saveVideosToLocalStorage(json.data);
+        return json.data;
       }
     }
   } catch (err) {
@@ -127,6 +52,97 @@ export const fetchAllVideos = async (): Promise<Video[]> => {
   }
 
   return getLocalStoredVideos();
+};
+
+// Real-time automatic background polling & window focus synchronization with MySQL
+let autoSyncStarted = false;
+let autoSyncInterval: any = null;
+
+export const startAutoSync = (intervalMs: number = 3000): void => {
+  if (typeof window === 'undefined' || autoSyncStarted) return;
+  autoSyncStarted = true;
+
+  // Immediate sync on load
+  fetchAllVideos().catch(() => {});
+
+  // Periodic poll every 3 seconds while active
+  autoSyncInterval = setInterval(() => {
+    if (!document.hidden) {
+      fetchAllVideos().catch(() => {});
+    }
+  }, intervalMs);
+
+  // Sync immediately when the user switches tabs back to this app (e.g. from phpMyAdmin)
+  window.addEventListener('focus', () => {
+    fetchAllVideos().catch(() => {});
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      fetchAllVideos().catch(() => {});
+    }
+  });
+};
+
+// Automatically start background sync on browser startup
+if (typeof window !== 'undefined') {
+  startAutoSync();
+}
+
+// Delete video from both backend MySQL and local storage
+export const deleteVideoAndPersist = async (id: string): Promise<boolean> => {
+  // 1. Immediately remove from local storage so UI updates instantly
+  const current = getLocalStoredVideos();
+  const updated = current.filter((v) => v.id !== id);
+  saveVideosToLocalStorage(updated, true);
+
+  // 2. Call backend DELETE endpoint to remove from MySQL and disk
+  try {
+    const res = await fetch(`/api/videos/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      console.warn('[videoStore] Failed to delete video on backend, status:', res.status);
+    }
+  } catch (e) {
+    console.warn('[videoStore] Failed to delete video on backend:', e);
+  }
+
+  return true;
+};
+
+// Increment video view count both in local storage and backend MySQL
+export const recordVideoView = async (id: string): Promise<number> => {
+  if (!id) return 0;
+  
+  // 1. Optimistically update local storage
+  const current = getLocalStoredVideos();
+  let updatedCount = 1;
+  const updated = current.map((v) => {
+    if (v.id === id) {
+      updatedCount = (v.viewCount || 0) + 1;
+      return { ...v, viewCount: updatedCount };
+    }
+    return v;
+  });
+  saveVideosToLocalStorage(updated, true);
+
+  // 2. Synchronize with backend API & MySQL
+  try {
+    const res = await fetch(`/api/videos/${id}/view`, { method: 'POST' });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && typeof json.viewCount === 'number') {
+        updatedCount = json.viewCount;
+        const fresh = getLocalStoredVideos().map((v) =>
+          v.id === id ? { ...v, viewCount: updatedCount } : v
+        );
+        saveVideosToLocalStorage(fresh, true);
+      }
+    }
+  } catch (err) {
+    console.warn('[videoStore] Failed to sync view count to backend:', err);
+  }
+
+  return updatedCount;
 };
 
 // Convert file to Base64 data URL for permanent offline backup
@@ -152,14 +168,36 @@ export const uploadAndPersistVideo = async (
     studyMaterialDataUrl?: string;
     description?: string;
     durationSeconds?: number;
+    transcript?: any[];
   }
 ): Promise<Video> => {
   let createdVideo: Video | null = null;
+  let finalTranscript = metadata.transcript;
+
+  if (!finalTranscript || finalTranscript.length === 0) {
+    try {
+      finalTranscript = await generateAutomaticTranscript(
+        metadata.topicName,
+        metadata.department,
+        metadata.durationSeconds || 240,
+        metadata.presentedBy
+      );
+    } catch (err) {
+      console.warn('[videoStore] Failed auto transcript generation:', err);
+    }
+  }
 
   // 1. Attempt upload to backend Express & MySQL
   try {
     if (metadata.durationSeconds && !formData.has('durationSeconds')) {
       formData.append('durationSeconds', metadata.durationSeconds.toString());
+    }
+    if (finalTranscript && finalTranscript.length > 0) {
+      if (formData.has('transcript')) {
+        formData.set('transcript', JSON.stringify(finalTranscript));
+      } else {
+        formData.append('transcript', JSON.stringify(finalTranscript));
+      }
     }
     const res = await fetch('/api/videos/upload', {
       method: 'POST',
@@ -168,7 +206,10 @@ export const uploadAndPersistVideo = async (
     if (res.ok) {
       const json = await res.json();
       if (json.success && json.data) {
-        createdVideo = json.data;
+        createdVideo = json.data as Video;
+        if (!createdVideo.transcript && finalTranscript) {
+          createdVideo.transcript = finalTranscript;
+        }
       }
     }
   } catch (err) {
@@ -181,7 +222,7 @@ export const uploadAndPersistVideo = async (
     createdVideo = {
       id,
       youtubeId: '',
-      localVideoPath: metadata.videoDataUrl || '/assets/videos/campusiq-01.mp4',
+      localVideoPath: metadata.videoDataUrl || '',
       title: metadata.topicName,
       topic: metadata.topicName,
       facultyName: metadata.presentedBy,
@@ -200,13 +241,98 @@ export const uploadAndPersistVideo = async (
       tags: [metadata.department, 'Lecture'],
       viewCount: 0,
       publishedDate: new Date().toISOString().split('T')[0],
+      transcript: finalTranscript || metadata.transcript,
     };
   }
 
-  // 3. Always persist to localStorage permanently
+  // 3. Always persist to localStorage permanently and sync with MySQL
   const current = getLocalStoredVideos();
   const updated = [createdVideo, ...current.filter((v) => v.id !== createdVideo!.id)];
-  saveVideosToLocalStorage(updated);
+  saveVideosToLocalStorage(updated, true);
+  await fetchAllVideos();
 
   return createdVideo;
 };
+
+// Update existing video permanently in MySQL and LocalStorage
+export const updateAndPersistVideo = async (
+  id: string,
+  formData: FormData,
+  metadata: {
+    topicName: string;
+    presentedBy: string;
+    department: string;
+    year: string;
+    thumbnailDataUrl?: string;
+    videoDataUrl?: string;
+    studyMaterialDataUrl?: string;
+    description?: string;
+    durationSeconds?: number;
+    transcript?: any[];
+  }
+): Promise<Video> => {
+  let updatedVideo: Video | null = null;
+  const current = getLocalStoredVideos();
+  const existing = current.find((v) => v.id === id);
+
+  try {
+    if (metadata.durationSeconds && !formData.has('durationSeconds')) {
+      formData.append('durationSeconds', metadata.durationSeconds.toString());
+    }
+    if (metadata.transcript && metadata.transcript.length > 0) {
+      if (formData.has('transcript')) {
+        formData.set('transcript', JSON.stringify(metadata.transcript));
+      } else {
+        formData.append('transcript', JSON.stringify(metadata.transcript));
+      }
+    }
+    if (!formData.has('topicName')) formData.append('topicName', metadata.topicName);
+    if (!formData.has('presentedBy')) formData.append('presentedBy', metadata.presentedBy);
+    if (!formData.has('department')) formData.append('department', metadata.department);
+    if (!formData.has('year')) formData.append('year', metadata.year);
+    if (metadata.description !== undefined && !formData.has('description')) {
+      formData.append('description', metadata.description);
+    }
+
+    const res = await fetch(`/api/videos/${id}`, {
+      method: 'PUT',
+      body: formData,
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.data) {
+        updatedVideo = json.data as Video;
+      }
+    }
+  } catch (err) {
+    console.warn('[videoStore] Failed to update via backend API, updating locally:', err);
+  }
+
+  if (!updatedVideo && existing) {
+    updatedVideo = {
+      ...existing,
+      title: metadata.topicName,
+      topic: metadata.topicName,
+      facultyName: metadata.presentedBy,
+      departmentCode: metadata.department,
+      departmentId: 'dept_' + metadata.department.toLowerCase(),
+      academicYear: metadata.year,
+      description: metadata.description !== undefined ? metadata.description : existing.description,
+      thumbnailUrl: metadata.thumbnailDataUrl || existing.thumbnailUrl,
+      localVideoPath: metadata.videoDataUrl || existing.localVideoPath,
+      studyMaterialUrl: metadata.studyMaterialDataUrl || existing.studyMaterialUrl,
+      durationSeconds: metadata.durationSeconds || existing.durationSeconds,
+      transcript: metadata.transcript || existing.transcript,
+    };
+  }
+
+  if (updatedVideo) {
+    const fresh = current.map((v) => (v.id === id ? updatedVideo! : v));
+    saveVideosToLocalStorage(fresh, true);
+    await fetchAllVideos();
+    return updatedVideo;
+  }
+
+  throw new Error('Video not found for update');
+};
+

@@ -69,11 +69,6 @@ export const PublicFooter: React.FC = () => {
                   Academic Departments (CSE, AI&DS, ECE)
                 </Link>
               </li>
-              <li>
-                <Link to="/student/quiz" className="hover:text-white transition-colors">
-                  AI Practice Quizzes
-                </Link>
-              </li>
             </ul>
           </div>
 

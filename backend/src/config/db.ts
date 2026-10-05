@@ -16,10 +16,16 @@ export const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+let reconnectTimer: NodeJS.Timeout | null = null;
+
 export const initDatabase = async (): Promise<boolean> => {
   try {
     const connection = await pool.getConnection();
     isDbConnected = true;
+    if (reconnectTimer) {
+      clearInterval(reconnectTimer);
+      reconnectTimer = null;
+    }
     console.log('✅ [MySQL] Successfully connected to MySQL database: ' + (process.env.DB_NAME || 'campusiq_db'));
     
     // Ensure videos table exists
@@ -42,6 +48,7 @@ export const initDatabase = async (): Promise<boolean> => {
         subject_title VARCHAR(255) DEFAULT 'General Engineering',
         unit_number INT DEFAULT 1,
         tags JSON,
+        transcript JSON,
         view_count INT DEFAULT 0,
         published_date DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -70,59 +77,31 @@ export const initDatabase = async (): Promise<boolean> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // Check if videos table has data, if not insert the 2 default videos
-    const [rows]: any = await connection.query('SELECT COUNT(*) as cnt FROM videos');
-    if (rows && rows[0]?.cnt === 0) {
-      await connection.query(`
-        INSERT INTO videos (
-          id, local_video_path, title, topic, faculty_name, department_code, academic_year, 
-          thumbnail_url, description, duration_seconds, semester, subject_code, subject_title, unit_number, published_date
-        ) VALUES 
-        (
-          'vid-local-01',
-          '/assets/videos/campusiq-01.mp4',
-          'federated learning',
-          'federated learning',
-          'asifa shereen CSE',
-          'CSE',
-          '2024-25',
-          'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60',
-          'Lecture on Federated Learning concepts, distributed machine learning architecture, and privacy-preserving model aggregation.',
-          240,
-          5,
-          'CS3551',
-          'Distributed & Federated Systems',
-          3,
-          '2026-09-01'
-        ),
-        (
-          'vid-local-02',
-          '/assets/videos/campusiq-02.mp4',
-          'web request',
-          'web request',
-          'asmath nabila CSE',
-          'CSE',
-          '2024-25',
-          'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=60',
-          'Comprehensive walkthrough of HTTP/HTTPS web requests, client-server communication lifecycle, REST protocols, and response headers.',
-          217,
-          5,
-          'CS3452',
-          'Web Technology & Networks',
-          2,
-          '2026-09-02'
-        );
-      `);
-      console.log('✅ [MySQL] Default local videos seeded into MySQL successfully.');
-    }
+    // Auto-seeding disabled to ensure user deletions in phpMyAdmin are permanently respected
 
     connection.release();
     return true;
   } catch (err: any) {
     isDbConnected = false;
     console.warn(`⚠️ [MySQL] Note: Could not connect to MySQL at ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 3306} (${err.message}). Using in-memory store for fallback.`);
+    
+    // Auto-retry in background every 5 seconds until connected
+    if (!reconnectTimer) {
+      reconnectTimer = setInterval(async () => {
+        const ok = await initDatabase();
+        if (ok && reconnectTimer) {
+          clearInterval(reconnectTimer);
+          reconnectTimer = null;
+        }
+      }, 5000);
+    }
     return false;
   }
+};
+
+export const ensureDbConnection = async (): Promise<boolean> => {
+  if (isDbConnected) return true;
+  return await initDatabase();
 };
 
 export const query = async (text: string, params?: any[]) => {

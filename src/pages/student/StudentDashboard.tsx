@@ -112,11 +112,19 @@ export const StudentDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredVideos.map((video) => (
-            <VideoCard key={video.id} video={video} showProgress={false} />
-          ))}
-        </div>
+        {filteredVideos.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredVideos.map((video) => (
+              <VideoCard key={video.id} video={video} showProgress={false} />
+            ))}
+          </div>
+        ) : (
+          <div className="p-10 text-center bg-white rounded-2xl border border-gray-200 shadow-sm">
+            <Video className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+            <p className="text-sm font-semibold text-[#17201C]">No video lectures available</p>
+            <p className="text-xs text-[#66736C] mt-1">Uploaded department lectures will appear here.</p>
+          </div>
+        )}
       </div>
 
     </div>

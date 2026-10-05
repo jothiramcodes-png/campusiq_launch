@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { MOCK_QUIZ_QUESTIONS } from '../../lib/mockDatabase';
-import { getLocalStoredVideos, fetchAllVideos } from '../../lib/videoStore';
+import { getLocalStoredVideos, fetchAllVideos, saveVideosToLocalStorage, recordVideoView } from '../../lib/videoStore';
+import { generateAutomaticTranscript } from '../../lib/transcriptParser';
 import { TranscriptViewer } from '../../components/video/TranscriptViewer';
-import { LectureQuizModal } from '../../components/video/LectureQuizModal';
 import { ExamRevisionModal } from '../../components/video/ExamRevisionModal';
 import {
   Bookmark,
@@ -11,7 +10,6 @@ import {
   Share2,
   Clock,
   BookOpen,
-  Award,
   ArrowRight,
   CheckCircle2,
   Eye,
@@ -23,7 +21,8 @@ import {
   Plus,
   Trash2,
   ExternalLink,
-  GraduationCap
+  GraduationCap,
+  Video as VideoIcon
 } from 'lucide-react';
 
 interface StudentNote {
@@ -41,45 +40,70 @@ export const VideoDetailPage: React.FC = () => {
 
   useEffect(() => {
     fetchAllVideos().then((list) => {
-      if (Array.isArray(list) && list.length > 0) {
+      if (Array.isArray(list)) {
         setVideos(list);
       }
     });
+
+    const handleUpdate = () => {
+      setVideos(getLocalStoredVideos());
+    };
+    window.addEventListener('campusiq_videos_updated', handleUpdate);
+    return () => window.removeEventListener('campusiq_videos_updated', handleUpdate);
   }, [videoId]);
 
-  const video = videos.find((v) => v.id === videoId) || videos[0] || {
-    id: 'vid-local-01',
-    localVideoPath: '/assets/videos/campusiq-01.mp4',
-    title: 'federated learning',
-    topic: 'federated learning',
-    facultyName: 'asifa shereen CSE',
-    departmentCode: 'CSE',
-    academicYear: '2024-25',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
-    description: 'Lecture on Federated Learning concepts.',
-    durationSeconds: 240,
-    semester: 5,
-    subjectCode: 'CS3551',
-    subjectTitle: 'Distributed & Federated Systems',
-    unitNumber: 3,
-    viewCount: 0,
-    tags: ['Machine Learning', 'Federated Learning'],
-  };
+  const video = videos.find((v) => v.id === videoId) || (videos.length > 0 ? videos[0] : null);
+  const nextVideo = video ? (videos.find((v) => v.id !== video.id) || null) : null;
 
-  const nextVideo = videos.find((v) => v.id !== video.id) || videos[1];
-
-  const initialTime = searchParams.get('t') ? Number(searchParams.get('t')) : (video.userProgressSeconds || 0);
-  const [currentTimeSeconds, setCurrentTimeSeconds] = useState(initialTime);
-  const [activeDuration, setActiveDuration] = useState<number>(video.durationSeconds || 240);
+  // Track video view count once per unique video session
+  const viewRecordedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (video.durationSeconds) {
+    if (video && video.id && viewRecordedRef.current !== video.id) {
+      viewRecordedRef.current = video.id;
+      recordVideoView(video.id).then((newCount) => {
+        setVideos((prev) =>
+          prev.map((v) => (v.id === video.id ? { ...v, viewCount: newCount } : v))
+        );
+      });
+    }
+  }, [video?.id]);
+
+  const initialTime = searchParams.get('t') ? Number(searchParams.get('t')) : (video?.userProgressSeconds || 0);
+  const [currentTimeSeconds, setCurrentTimeSeconds] = useState(initialTime);
+  const [activeDuration, setActiveDuration] = useState<number>(video?.durationSeconds || 240);
+
+  useEffect(() => {
+    if (video?.durationSeconds) {
       setActiveDuration(video.durationSeconds);
     }
-  }, [video.id, video.durationSeconds]);
-  const [isBookmarked, setIsBookmarked] = useState(video.isBookmarked || false);
-  const [isCompleted, setIsCompleted] = useState(video.isCompleted || false);
-  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  }, [video?.id, video?.durationSeconds]);
+
+  // Automatically generate interactive transcript and chapter jump points if missing
+  useEffect(() => {
+    if (video && (!video.transcript || video.transcript.length === 0)) {
+      generateAutomaticTranscript(
+        video.title || video.topic || 'Engineering Lecture',
+        video.departmentCode || 'CSE',
+        video.durationSeconds || activeDuration || 240,
+        video.facultyName
+      ).then((generated) => {
+        if (generated && generated.length > 0) {
+          const updated = { ...video, transcript: generated };
+          setVideos((prev) => prev.map((v) => (v.id === video.id ? updated : v)));
+          const allLocal = getLocalStoredVideos();
+          saveVideosToLocalStorage(
+            allLocal.map((v) => (v.id === video.id ? updated : v)),
+            true
+          );
+        }
+      }).catch((err) => {
+        console.warn('Could not auto-generate transcript for video:', err);
+      });
+    }
+  }, [video?.id]);
+  const [isBookmarked, setIsBookmarked] = useState(video?.isBookmarked || false);
+  const [isCompleted, setIsCompleted] = useState(video?.isCompleted || false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'transcript' | 'notes'>('transcript');
@@ -143,6 +167,28 @@ export const VideoDetailPage: React.FC = () => {
   };
 
   const progressPct = Math.min(100, Math.round((currentTimeSeconds / (activeDuration || 1)) * 100));
+
+  if (!video) {
+    return (
+      <div className="max-w-xl mx-auto my-16 p-10 text-center bg-white rounded-3xl border border-gray-200 shadow-sm space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto text-gray-400">
+          <VideoIcon className="w-7 h-7" />
+        </div>
+        <h2 className="text-xl font-bold text-[#17201C]">No Video Lecture Found</h2>
+        <p className="text-sm text-[#66736C]">
+          There are currently no video lectures uploaded or available for viewing.
+        </p>
+        <div className="pt-2">
+          <Link
+            to="/student/videos"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#173B2F] text-white text-xs font-semibold hover:bg-[#122A22] transition"
+          >
+            Go to Learning Hub
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-20">
@@ -333,13 +379,6 @@ export const VideoDetailPage: React.FC = () => {
                 <span>AI University Exam Revision Kit</span>
               </button>
 
-              <button
-                onClick={() => setIsQuizModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-[#173B2F] hover:bg-[#285443] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
-              >
-                <Award className="w-4 h-4 text-[#C49A55]" />
-                <span>Take Practice Quiz</span>
-              </button>
             </div>
 
             {/* Description */}
@@ -526,13 +565,6 @@ export const VideoDetailPage: React.FC = () => {
 
       </div>
 
-      {/* AI Practice Quiz Modal */}
-      <LectureQuizModal
-        isOpen={isQuizModalOpen}
-        onClose={() => setIsQuizModalOpen(false)}
-        questions={MOCK_QUIZ_QUESTIONS}
-        subjectTitle={`${video.subjectCode} Unit ${video.unitNumber} Practice Quiz`}
-      />
 
       {/* AI Exam Revision Kit Modal */}
       <ExamRevisionModal

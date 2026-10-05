@@ -1,23 +1,17 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
 import {
-  Bell,
   ChevronDown,
   UserCheck,
-  CheckCircle2,
   ExternalLink,
   LogOut,
   GraduationCap
 } from 'lucide-react';
-import { Role } from '../../types';
 
 export const AppHeader: React.FC = () => {
   const { currentUser, role, logout } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
-  const [notifOpen, setNotifOpen] = useState(false);
   const [personaOpen, setPersonaOpen] = useState(false);
 
   const getDashboardRoot = () => {
@@ -82,63 +76,6 @@ export const AppHeader: React.FC = () => {
         {/* Right: Actions & Persona */}
         <div className="flex items-center gap-2 sm:gap-3">
 
-
-          {/* Notifications Bell with Category Badges */}
-          <div className="relative">
-            <button
-              onClick={() => setNotifOpen(!notifOpen)}
-              className="relative p-2 rounded-xl bg-black/25 hover:bg-white/10 text-white/90 border border-white/10 transition-colors cursor-pointer shadow-inner"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center animate-bounce">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-
-            {notifOpen && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 py-2 bg-[#101815] border border-white/20 rounded-2xl shadow-2xl z-50 animate-fade-in">
-                <div className="px-4 py-2 flex items-center justify-between border-b border-white/10">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#C49A55]">
-                    Institutional Notices ({unreadCount} new)
-                  </span>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={markAllAsRead}
-                      className="text-[11px] text-[#6FA9C9] hover:underline cursor-pointer"
-                    >
-                      Mark all read
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
-                  {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-gray-500">
-                      No notifications at this time.
-                    </div>
-                  ) : (
-                    notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        onClick={() => markAsRead(n.id)}
-                        className={`p-3 text-xs transition-colors cursor-pointer ${
-                          n.read ? 'opacity-60 hover:opacity-90' : 'bg-white/5 hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-white">{n.title}</span>
-                          <span className="text-[10px] text-gray-400 font-mono">{n.timestamp}</span>
-                        </div>
-                        <p className="text-[11px] text-gray-300 line-clamp-2">{n.message}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* Persona Switcher Quick Pill */}
           <div className="relative">

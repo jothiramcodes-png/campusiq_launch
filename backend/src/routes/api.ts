@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { handleRagQuery } from '../controllers/ragController';
-import { listVideos, getVideoById, createVideo } from '../controllers/videoController';
+import { listVideos, getVideoById, createVideo, updateVideo, deleteVideo, incrementViewCount, syncVideos } from '../controllers/videoController';
 import {
   searchEducationalVideos,
   getRelatedEducationalVideos,
@@ -8,11 +8,12 @@ import {
 } from '../controllers/videoSearchController';
 import { searchRateLimiter } from '../middleware/rateLimiter';
 import { authenticate, requireRole } from '../middleware/auth';
-import { syncUser, getUserProfile } from '../controllers/userController';
+import { syncUser, getUserProfile, loginUser } from '../controllers/userController';
 
 const router = Router();
 
 // User Authentication & Database Synchronization Routes
+router.post('/auth/login', loginUser);
 router.post('/auth/sync-user', syncUser);
 router.get('/auth/user', getUserProfile);
 
@@ -32,6 +33,10 @@ router.get('/videos', listVideos);
 router.get('/videos/:id', getVideoById);
 router.post('/videos', uploadVideoFiles, createVideo);
 router.post('/videos/upload', uploadVideoFiles, createVideo);
+router.put('/videos/:id', uploadVideoFiles, updateVideo);
+router.post('/videos/sync', syncVideos);
+router.post('/videos/:id/view', incrementViewCount);
+router.delete('/videos/:id', deleteVideo);
 
 // 5. Modular Curriculum & Learning Platform Routes (SWAYAM / Simplilearn Model)
 import {

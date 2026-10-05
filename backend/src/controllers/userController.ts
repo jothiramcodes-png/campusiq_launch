@@ -1,8 +1,41 @@
 import { Request, Response } from 'express';
-import { pool, isDbConnected } from '../config/db';
+import { pool, isDbConnected, ensureDbConnection } from '../config/db';
+
+export const loginUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    if (!email) {
+      res.status(400).json({ success: false, error: 'Email is required' });
+      return;
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    // STRICT ADMIN CREDENTIAL ENFORCEMENT: Only admin123 is accepted
+    if (cleanEmail === 'admincampusiq@gmail.com') {
+      if (!password || password !== 'admin123') {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid administrator credentials. Incorrect password.',
+        });
+        return;
+      }
+    }
+
+    const role = cleanEmail === 'admincampusiq@gmail.com' ? 'ADMIN' : 'STUDENT';
+    res.json({
+      success: true,
+      message: 'Authentication successful',
+      role,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'Authentication error', details: err.message });
+  }
+};
 
 export const syncUser = async (req: Request, res: Response): Promise<void> => {
   try {
+    await ensureDbConnection();
     const {
       id,
       email,
@@ -113,6 +146,7 @@ export const syncUser = async (req: Request, res: Response): Promise<void> => {
 
 export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
+    await ensureDbConnection();
     const { email } = req.query;
     if (!email || typeof email !== 'string') {
       res.status(400).json({ error: 'Email query parameter required' });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -15,16 +15,31 @@ import {
   Zap,
   GraduationCap
 } from 'lucide-react';
-import { MOCK_VIDEOS, MOCK_DEPARTMENTS } from '../../lib/mockDatabase';
+import { MOCK_DEPARTMENTS } from '../../lib/mockDatabase';
+import { getLocalStoredVideos, fetchAllVideos } from '../../lib/videoStore';
 import { VideoCard } from '../../components/video/VideoCard';
 import { GlassCard } from '../../components/common/GlassCard';
+import { Video as VideoType } from '../../types';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, role } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [featuredVideos, setFeaturedVideos] = useState<VideoType[]>(getLocalStoredVideos().slice(0, 3));
 
-  const featuredVideos = MOCK_VIDEOS.slice(0, 3);
+  useEffect(() => {
+    fetchAllVideos().then((vids) => {
+      if (Array.isArray(vids)) {
+        setFeaturedVideos(vids.slice(0, 3));
+      }
+    });
+
+    const handleUpdate = () => {
+      setFeaturedVideos(getLocalStoredVideos().slice(0, 3));
+    };
+    window.addEventListener('campusiq_videos_updated', handleUpdate);
+    return () => window.removeEventListener('campusiq_videos_updated', handleUpdate);
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,16 +264,24 @@ export const LandingPage: React.FC = () => {
               to="/student/videos"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-[#173B2F] hover:underline"
             >
-              <span>View All 240+ Lectures</span>
+              <span>View All Lectures</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredVideos.map((video) => (
-              <VideoCard key={video.id} video={video} />
-            ))}
-          </div>
+          {featuredVideos.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {featuredVideos.map((video) => (
+                <VideoCard key={video.id} video={video} />
+              ))}
+            </div>
+          ) : (
+            <div className="p-10 text-center bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 shadow-sm">
+              <Video className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+              <p className="text-sm font-semibold text-gray-700">No video lectures available currently</p>
+              <p className="text-xs text-gray-500 mt-1">Uploaded department lectures will appear here.</p>
+            </div>
+          )}
         </div>
       </section>
 

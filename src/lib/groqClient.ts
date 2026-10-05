@@ -14,8 +14,9 @@ export interface GroqGenerationOptions {
 }
 
 const GROQ_API_KEY =
-  import.meta.env.VITE_GROQ_API_KEY ||
-  ['gsk', 'w2CA7dDyahFk68oStSgWWGdyb3FYen31OrjjFa0MjIGFcfUEyBAk'].join('_');
+  (import.meta.env.VITE_GROQ_API_KEY && import.meta.env.VITE_GROQ_API_KEY !== 'your_groq_api_key_here')
+    ? import.meta.env.VITE_GROQ_API_KEY
+    : ['gsk', 'w2CA7dDyahFk68oStSgWWGdyb3FYen31OrjjFa0MjIGFcfUEyBAk'].join('_');
 
 const PRIMARY_MODEL = import.meta.env.VITE_GROQ_MODEL || 'qwen/qwen3.8-27b';
 const FALLBACK_MODEL = 'openai/gpt-oss-120b';

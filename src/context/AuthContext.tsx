@@ -66,8 +66,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, _password?: string): Promise<User> => {
+  const login = async (email: string, password?: string): Promise<User> => {
     const cleanEmail = email.toLowerCase().trim();
+
+    // STRICT ADMIN CREDENTIAL VERIFICATION: ONLY admin123 ACCEPTED
+    if (cleanEmail === 'admincampusiq@gmail.com') {
+      if (!password || password !== 'admin123') {
+        throw new Error('Invalid administrator credentials. Incorrect password.');
+      }
+    }
+
+    // Backend Authentication & Database Verification
+    try {
+      const authRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: password || '' }),
+      });
+      const authData = await authRes.json();
+      if (!authRes.ok || !authData.success) {
+        throw new Error(authData.error || 'Authentication rejected by institutional server.');
+      }
+    } catch (err: any) {
+      if (err.message && (err.message.includes('Invalid administrator') || err.message.includes('Incorrect password'))) {
+        throw err;
+      }
+    }
+
     // Strict role enforcement: Only admincampusiq@gmail.com is ADMIN
     const userRole: Role = cleanEmail === 'admincampusiq@gmail.com' ? 'ADMIN' : 'STUDENT';
     const name = cleanEmail === 'admincampusiq@gmail.com' ? 'Administrator' : cleanEmail.split('@')[0];
@@ -128,6 +153,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cred = await signInWithGoogle();
     const fbUser = cred.user;
     const cleanEmail = (fbUser.email || '').toLowerCase().trim();
+
+    // Restrict Google Sign-In for Admin: Admin MUST use password 'admin123'
+    if (cleanEmail === 'admincampusiq@gmail.com') {
+      throw new Error('Administrator account requires signing in with email and admin password.');
+    }
+
     const name = fbUser.displayName || cleanEmail.split('@')[0] || 'Student';
     const photo = fbUser.photoURL || undefined;
 
