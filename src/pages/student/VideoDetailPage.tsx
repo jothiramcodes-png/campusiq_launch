@@ -73,6 +73,11 @@ export const VideoDetailPage: React.FC = () => {
   const initialTime = searchParams.get('t') ? Number(searchParams.get('t')) : (video?.userProgressSeconds || 0);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(initialTime);
   const [activeDuration, setActiveDuration] = useState<number>(video?.durationSeconds || 240);
+  const [videoLoadError, setVideoLoadError] = useState(false);
+
+  useEffect(() => {
+    setVideoLoadError(false);
+  }, [video?.id]);
 
   useEffect(() => {
     if (video?.durationSeconds) {
@@ -254,23 +259,57 @@ export const VideoDetailPage: React.FC = () => {
           {/* Video Player Embed */}
           <div className="relative rounded-3xl overflow-hidden aspect-video bg-black shadow-2xl border border-gray-800">
             {video.localVideoPath ? (
-              <video
-                key={video.id}
-                ref={videoRef}
-                controls
-                autoPlay
-                className="w-full h-full border-0 object-contain"
-                onTimeUpdate={(e) => setCurrentTimeSeconds(Math.floor(e.currentTarget.currentTime))}
-                onLoadedMetadata={(e) => {
-                  e.currentTarget.currentTime = initialTime;
-                  if (e.currentTarget.duration && !isNaN(e.currentTarget.duration)) {
-                    setActiveDuration(Math.round(e.currentTarget.duration));
-                  }
-                }}
-              >
-                <source src={resolveMediaUrl(video.localVideoPath)} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+              <>
+                <video
+                  key={video.id}
+                  ref={videoRef}
+                  controls
+                  autoPlay
+                  className={`w-full h-full border-0 object-contain ${videoLoadError ? 'hidden' : 'block'}`}
+                  onError={() => setVideoLoadError(true)}
+                  onTimeUpdate={(e) => setCurrentTimeSeconds(Math.floor(e.currentTarget.currentTime))}
+                  onLoadedMetadata={(e) => {
+                    setVideoLoadError(false);
+                    e.currentTarget.currentTime = initialTime;
+                    if (e.currentTarget.duration && !isNaN(e.currentTarget.duration)) {
+                      setActiveDuration(Math.round(e.currentTarget.duration));
+                    }
+                  }}
+                >
+                  <source
+                    src={resolveMediaUrl(video.localVideoPath)}
+                    type="video/mp4"
+                    onError={() => setVideoLoadError(true)}
+                  />
+                  Your browser does not support the video tag.
+                </video>
+                {videoLoadError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gray-900/95 backdrop-blur-md">
+                    <img
+                      src={resolveMediaUrl(video.thumbnailUrl)}
+                      alt={video.title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-20 filter blur-sm"
+                    />
+                    <div className="relative z-10 max-w-md space-y-3">
+                      <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 shadow-lg">
+                        <Sparkles className="w-7 h-7" />
+                      </div>
+                      <h3 className="text-lg font-bold text-white">Local Video File Awaiting Cloud Sync</h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        This lecture video is stored on your campus local workstation. To stream it on the public web, upload it to Cloudinary.
+                      </p>
+                      <div className="p-2.5 rounded-xl bg-black/60 border border-gray-700/80 text-[11px] text-gray-300 font-mono text-left space-y-1">
+                        <div className="text-amber-300 font-bold">Quick Cloudinary Sync:</div>
+                        <div>1. Add keys in <code className="text-emerald-400">backend/.env</code></div>
+                        <div>2. Run <code className="text-emerald-400">npm run sync:cloudinary</code></div>
+                      </div>
+                      <p className="text-[11px] text-emerald-400 font-medium">
+                        ✨ Spoken transcripts, notes, and AI Copilot quizzes are active below!
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <iframe
                 ref={iframeRef}

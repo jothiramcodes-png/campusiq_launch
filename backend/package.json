@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc && node -e \"const fs=require('fs'); fs.mkdirSync('dist/data',{recursive:true}); fs.copyFileSync('src/data/seedVideos.json','dist/data/seedVideos.json');\"",
     "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "sync:cloudinary": "tsx scripts/upload_to_cloudinary.ts"
   },
   "engines": {
     "node": ">=22.5.0"
@@ -16,6 +17,7 @@
     "@types/express": "^5.0.0",
     "@types/multer": "^2.2.0",
     "@types/node": "^22.10.5",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

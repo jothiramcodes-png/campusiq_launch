@@ -11,6 +11,7 @@ import {
   getVideosFromSqlite,
   getVideoByIdFromSqlite,
 } from '../config/sqlite';
+import { uploadVideoToCloudinary, isCloudinaryConfigured } from '../utils/cloudinary';
 
 // In-memory fallback matching the user's manual local videos
 let fallbackVideos: any[] = [];
@@ -227,15 +228,26 @@ export const createVideo = async (req: Request, res: Response): Promise<void> =>
     const thumbnailFile = files?.['thumbnailFile']?.[0];
     const studyMaterialFile = files?.['studyMaterialFile']?.[0];
 
-    const finalVideoPath = videoFile 
+    const newId = 'vid-' + Date.now().toString(36);
+    let finalVideoPath = videoFile 
       ? `/uploads/videos/${videoFile.filename}` 
       : (videoPath || '');
+
+    if (videoFile && isCloudinaryConfigured) {
+      try {
+        console.log(`☁️ [Cloudinary] Uploading new video lecture (${topicName})...`);
+        const cRes = await uploadVideoToCloudinary(videoFile.path, newId);
+        finalVideoPath = cRes.url;
+        console.log(`✅ [Cloudinary] Successfully uploaded: ${finalVideoPath}`);
+      } catch (cErr: any) {
+        console.warn('⚠️ [Cloudinary] Video upload failed, keeping local file path:', cErr.message);
+      }
+    }
 
     let finalThumbnailUrl = thumbnailFile 
       ? `/uploads/thumbnails/${thumbnailFile.filename}` 
       : (thumbnailUrl || '');
 
-    // If no custom thumbnail was uploaded, automatically extract 1st second frame of video
     if ((!finalThumbnailUrl || finalThumbnailUrl.includes('unsplash.com')) && videoFile) {
       const autoThumb = extract1sThumbnail(videoFile.path);
       if (autoThumb) {
@@ -251,7 +263,6 @@ export const createVideo = async (req: Request, res: Response): Promise<void> =>
       ? `/uploads/materials/${studyMaterialFile.filename}` 
       : (studyMaterialUrl || undefined);
 
-    const newId = 'vid-' + Date.now().toString(36);
     const newVideo = {
       id: newId,
       youtubeId: '',
