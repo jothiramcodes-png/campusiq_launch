@@ -185,7 +185,7 @@ export const createVideo = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const files = req.files as { [fieldname: string]: any[] } | undefined;
     const videoFile = files?.['videoFile']?.[0];
     const thumbnailFile = files?.['thumbnailFile']?.[0];
     const studyMaterialFile = files?.['studyMaterialFile']?.[0];
@@ -342,7 +342,7 @@ export const updateVideo = async (req: Request, res: Response): Promise<void> =>
       transcript,
     } = req.body;
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const files = req.files as { [fieldname: string]: any[] } | undefined;
     const newVideoFile = files?.['videoFile']?.[0];
     const newThumbnailFile = files?.['thumbnailFile']?.[0];
     const newStudyMaterialFile = files?.['studyMaterialFile']?.[0];

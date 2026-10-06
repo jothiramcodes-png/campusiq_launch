@@ -5,7 +5,7 @@ import fs from 'fs';
 const uploadsBase = path.join(__dirname, '../../uploads');
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: any, file: any, cb: any) => {
     let folder = 'materials';
     if (file.fieldname === 'videoFile') {
       folder = 'videos';
@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
     }
     cb(null, dest);
   },
-  filename: (req, file, cb) => {
+  filename: (req: any, file: any, cb: any) => {
     const ext = path.extname(file.originalname);
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);

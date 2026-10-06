@@ -21,7 +21,7 @@ if (process.env.FRONTEND_URL) {
 }
 
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: (origin: any, callback: any) => {
     // allow requests with no origin (like mobile apps, curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
     if (
