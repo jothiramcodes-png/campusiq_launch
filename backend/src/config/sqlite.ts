@@ -50,6 +50,37 @@ export const initSqlite = (): boolean => {
 
     isSqliteReady = true;
     console.log(`✅ [SQLite] Database initialized at: ${dbFilePath}`);
+
+    // Auto-seed if database has 0 videos
+    try {
+      const countRow: any = sqliteDb.prepare('SELECT COUNT(*) as count FROM videos').get();
+      if (!countRow || countRow.count === 0) {
+        const candidatePaths = [
+          path.join(__dirname, '../data/seedVideos.json'),
+          path.join(__dirname, '../../src/data/seedVideos.json'),
+          path.join(__dirname, '../../data/seedVideos.json'),
+          path.join(process.cwd(), 'src/data/seedVideos.json'),
+          path.join(process.cwd(), 'dist/data/seedVideos.json'),
+          path.join(process.cwd(), 'backend/src/data/seedVideos.json'),
+        ];
+        const seedPath = candidatePaths.find((p) => fs.existsSync(p));
+        if (seedPath) {
+          const rawSeed = fs.readFileSync(seedPath, 'utf8');
+          const seedVideos = JSON.parse(rawSeed);
+          if (Array.isArray(seedVideos) && seedVideos.length > 0) {
+            for (const v of seedVideos) {
+              saveVideoToSqlite(v);
+            }
+            console.log(`✅ [SQLite] Auto-seeded ${seedVideos.length} initial videos from ${seedPath}`);
+          }
+        } else {
+          console.warn('⚠️ [SQLite] No seedVideos.json found in candidate paths.');
+        }
+      }
+    } catch (seedErr: any) {
+      console.warn('⚠️ [SQLite] Auto-seed check failed:', seedErr.message);
+    }
+
     return true;
   } catch (err: any) {
     console.error('⚠️ [SQLite] Failed to initialize SQLite database:', err.message);

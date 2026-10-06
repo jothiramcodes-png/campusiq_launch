@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Video } from '../../types';
 import { Clock, Play, FileText, Eye } from 'lucide-react';
+import { resolveMediaUrl } from '../../config/api';
 
 interface VideoCardProps {
   video: Video;
@@ -28,7 +29,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
         className="relative block aspect-video w-full overflow-hidden bg-black/10"
       >
         <img
-          src={video.thumbnailUrl}
+          src={resolveMediaUrl(video.thumbnailUrl)}
           alt={video.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />

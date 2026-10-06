@@ -4,6 +4,7 @@ import { getLocalStoredVideos, fetchAllVideos, saveVideosToLocalStorage, recordV
 import { generateAutomaticTranscript } from '../../lib/transcriptParser';
 import { TranscriptViewer } from '../../components/video/TranscriptViewer';
 import { ExamRevisionModal } from '../../components/video/ExamRevisionModal';
+import { resolveMediaUrl } from '../../config/api';
 import {
   Bookmark,
   Sparkles,
@@ -87,7 +88,7 @@ export const VideoDetailPage: React.FC = () => {
         video.departmentCode || 'CSE',
         video.durationSeconds || activeDuration || 240,
         video.facultyName
-      ).then((generated) => {
+      ).then((generated: any) => {
         if (generated && generated.length > 0) {
           const updated = { ...video, transcript: generated };
           setVideos((prev) => prev.map((v) => (v.id === video.id ? updated : v)));
@@ -97,7 +98,7 @@ export const VideoDetailPage: React.FC = () => {
             true
           );
         }
-      }).catch((err) => {
+      }).catch((err: any) => {
         console.warn('Could not auto-generate transcript for video:', err);
       });
     }
@@ -267,7 +268,7 @@ export const VideoDetailPage: React.FC = () => {
                   }
                 }}
               >
-                <source src={video.localVideoPath} type="video/mp4" />
+                <source src={resolveMediaUrl(video.localVideoPath)} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             ) : (

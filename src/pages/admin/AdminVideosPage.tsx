@@ -11,6 +11,7 @@ import { captureVideoFrameAtFirstSecond } from '../../lib/videoThumbnail';
 import { parseTranscript, generateAutomaticTranscript } from '../../lib/transcriptParser';
 import { Video, Plus, Upload, X, Trash2, FileText, CheckCircle2, ChevronDown, ChevronUp, Sparkles, Loader2, Eye, Pencil, Image as ImageIcon } from 'lucide-react';
 import { Video as VideoType, TranscriptChunk } from '../../types';
+import { resolveMediaUrl } from '../../config/api';
 
 export const AdminVideosPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -402,7 +403,7 @@ export const AdminVideosPage: React.FC = () => {
           >
             <div className="flex gap-3">
               <div className="w-24 h-16 rounded-xl overflow-hidden bg-gray-900 shrink-0">
-                <img src={v.thumbnailUrl} alt={v.title} className="w-full h-full object-cover" />
+                <img src={resolveMediaUrl(v.thumbnailUrl)} alt={v.title} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">

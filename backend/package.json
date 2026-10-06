@@ -4,7 +4,7 @@
   "description": "Production Backend & Hybrid RAG Service for CAMPUSIQ (NSCET Theni)",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs'); fs.mkdirSync('dist/data',{recursive:true}); fs.copyFileSync('src/data/seedVideos.json','dist/data/seedVideos.json');\"",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts"
   },

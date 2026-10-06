@@ -14,6 +14,43 @@ import {
 
 // In-memory fallback matching the user's manual local videos
 let fallbackVideos: any[] = [];
+try {
+  const candidatePaths = [
+    path.join(__dirname, '../data/seedVideos.json'),
+    path.join(__dirname, '../../src/data/seedVideos.json'),
+    path.join(process.cwd(), 'src/data/seedVideos.json'),
+    path.join(process.cwd(), 'dist/data/seedVideos.json'),
+  ];
+  const p = candidatePaths.find((cp) => fs.existsSync(cp));
+  if (p) {
+    const raw = fs.readFileSync(p, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      fallbackVideos = parsed.map((r: any) => ({
+        id: r.id,
+        youtubeId: r.youtube_id || r.youtubeId || '',
+        localVideoPath: r.local_video_path || r.localVideoPath || undefined,
+        title: r.title,
+        topic: r.topic || r.title,
+        facultyName: r.faculty_name || r.facultyName || 'Faculty',
+        departmentCode: r.department_code || r.departmentCode || 'CSE',
+        academicYear: r.academic_year || r.academicYear || '2026-27',
+        thumbnailUrl: r.thumbnail_url || r.thumbnailUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+        studyMaterialUrl: r.study_material_url || r.studyMaterialUrl || undefined,
+        description: r.description || '',
+        durationSeconds: r.duration_seconds || r.durationSeconds || 120,
+        semester: r.semester || 1,
+        subjectCode: r.subject_code || r.subjectCode || 'GEN',
+        subjectTitle: r.subject_title || r.subjectTitle || 'General Engineering',
+        unitNumber: r.unit_number || r.unitNumber || 1,
+        viewCount: r.view_count || r.viewCount || 0,
+        publishedDate: r.published_date || r.publishedDate || new Date().toISOString().split('T')[0],
+        tags: r.tags ? (typeof r.tags === 'string' ? JSON.parse(r.tags) : r.tags) : ['Engineering', 'Lecture'],
+        transcript: r.transcript ? (typeof r.transcript === 'string' ? JSON.parse(r.transcript) : r.transcript) : undefined,
+      }));
+    }
+  }
+} catch (_) {}
 
 export const listVideos = async (req: Request, res: Response): Promise<void> => {
   const { department, semester, unit, search } = req.query;

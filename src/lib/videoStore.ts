@@ -1,10 +1,38 @@
 import { Video } from '../types';
 import { generateAutomaticTranscript } from './transcriptParser';
 import { getApiUrl } from '../config/api';
+import rawSeedVideos from '../data/seedVideos.json';
 
 const STORAGE_KEY = 'campusiq_uploaded_videos';
 
-export const DEFAULT_VIDEOS: Video[] = [];
+const formatSeedVideo = (r: any): Video => ({
+  id: r.id,
+  youtubeId: r.youtube_id || r.youtubeId || '',
+  localVideoPath: r.local_video_path || r.localVideoPath || undefined,
+  title: r.title,
+  topic: r.topic || r.title,
+  facultyName: r.faculty_name || r.facultyName || 'Faculty',
+  departmentCode: r.department_code || r.departmentCode || 'CSE',
+  departmentId: 'dept_' + (r.department_code || r.departmentCode || 'cse').toLowerCase(),
+  program: 'B.E',
+  academicYear: r.academic_year || r.academicYear || '2026-27',
+  thumbnailUrl: r.thumbnail_url || r.thumbnailUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+  studyMaterialUrl: r.study_material_url || r.studyMaterialUrl || undefined,
+  description: r.description || '',
+  durationSeconds: r.duration_seconds || r.durationSeconds || 120,
+  semester: r.semester || 1,
+  subjectCode: r.subject_code || r.subjectCode || 'GEN',
+  subjectTitle: r.subject_title || r.subjectTitle || 'General Engineering',
+  unitNumber: r.unit_number || r.unitNumber || 1,
+  viewCount: r.view_count || r.viewCount || 0,
+  publishedDate: r.published_date || r.publishedDate || new Date().toISOString().split('T')[0],
+  tags: r.tags ? (typeof r.tags === 'string' ? JSON.parse(r.tags) : r.tags) : ['Engineering', 'Lecture'],
+  transcript: r.transcript ? (typeof r.transcript === 'string' ? JSON.parse(r.transcript) : r.transcript) : undefined,
+});
+
+export const DEFAULT_VIDEOS: Video[] = Array.isArray(rawSeedVideos)
+  ? (rawSeedVideos as any[]).map(formatSeedVideo)
+  : [];
 
 // Helper to get local stored videos
 export const getLocalStoredVideos = (): Video[] => {
@@ -12,7 +40,7 @@ export const getLocalStoredVideos = (): Video[] => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
       }
     }
@@ -43,7 +71,7 @@ export const fetchAllVideos = async (): Promise<Video[]> => {
     const res = await fetch(getApiUrl('/api/videos'));
     if (res.ok) {
       const json = await res.json();
-      if (json && Array.isArray(json.data)) {
+      if (json && Array.isArray(json.data) && json.data.length > 0) {
         saveVideosToLocalStorage(json.data);
         return json.data;
       }
@@ -52,7 +80,12 @@ export const fetchAllVideos = async (): Promise<Video[]> => {
     console.log('[videoStore] Backend API offline or unreachable, using local storage cache.');
   }
 
-  return getLocalStoredVideos();
+  const current = getLocalStoredVideos();
+  if (current.length === 0 && DEFAULT_VIDEOS.length > 0) {
+    saveVideosToLocalStorage(DEFAULT_VIDEOS);
+    return DEFAULT_VIDEOS;
+  }
+  return current;
 };
 
 // Real-time automatic background polling & window focus synchronization with MySQL

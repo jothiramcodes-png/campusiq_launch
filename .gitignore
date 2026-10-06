@@ -38,7 +38,8 @@ __pycache__/
 tools/
 
 # Uploaded Files
-backend/uploads/
+backend/uploads/videos/
+!backend/uploads/thumbnails/
 
 # SQLite Databases
 *.sqlite
