@@ -88,6 +88,12 @@ async function run() {
         } catch (_) {}
       }
 
+      // Save files incrementally so progress is never lost
+      fs.writeFileSync(seedPathBackend, JSON.stringify(videos, null, 2));
+      if (fs.existsSync(path.dirname(seedPathFrontend))) {
+        fs.writeFileSync(seedPathFrontend, JSON.stringify(videos, null, 2));
+      }
+
       updatedCount++;
     } catch (err: any) {
       console.error(`   ❌ Failed to upload: ${err.message}`);

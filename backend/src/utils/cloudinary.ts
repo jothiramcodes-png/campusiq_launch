@@ -2,21 +2,13 @@ import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const cloudinaryUrl = process.env.CLOUDINARY_URL;
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.CLOUDINARY_API_KEY;
-const apiSecret = process.env.CLOUDINARY_API_SECRET;
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'ztuchlmk';
+const apiKey = process.env.CLOUDINARY_API_KEY || '135743747348255';
+const apiSecret = process.env.CLOUDINARY_API_SECRET || 'jqAgMPYqFSf2g-ulW5MmCbY3IFA';
 
 export let isCloudinaryConfigured = false;
 
-if (cloudinaryUrl && !cloudinaryUrl.includes('<your_api_key>') && !cloudinaryUrl.includes('<your_api_secret>')) {
-  cloudinary.config({
-    cloudinary_url: cloudinaryUrl,
-    secure: true,
-  });
-  isCloudinaryConfigured = true;
-  console.log('☁️ [Cloudinary] Initialized via CLOUDINARY_URL');
-} else if (cloudName && apiKey && apiSecret) {
+if (cloudName && apiKey && apiSecret) {
   cloudinary.config({
     cloud_name: cloudName,
     api_key: apiKey,
@@ -37,15 +29,28 @@ export const uploadVideoToCloudinary = async (
     throw new Error('Cloudinary credentials are not configured in environment variables.');
   }
 
-  const result = await cloudinary.uploader.upload(filePath, {
-    resource_type: 'video',
-    folder: 'campusiq_videos',
-    public_id: publicId,
-    overwrite: true,
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_large(
+      filePath,
+      {
+        resource_type: 'video',
+        folder: 'campusiq_videos',
+        public_id: publicId,
+        overwrite: true,
+        chunk_size: 6000000, // 6MB chunks
+      },
+      (error: any, result: any) => {
+        if (error) {
+          return reject(new Error(error.message || JSON.stringify(error)));
+        }
+        if (!result) {
+          return reject(new Error('Cloudinary upload returned empty result'));
+        }
+        resolve({
+          url: result.secure_url,
+          duration: typeof result.duration === 'number' ? Math.round(result.duration) : undefined,
+        });
+      }
+    );
   });
-
-  return {
-    url: result.secure_url,
-    duration: typeof result.duration === 'number' ? Math.round(result.duration) : undefined,
-  };
 };
