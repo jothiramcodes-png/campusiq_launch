@@ -40,3 +40,10 @@ tools/
 # Uploaded Files
 backend/uploads/
 
+# SQLite Databases
+*.sqlite
+*.sqlite3
+*.db
+backend/data/
+
+

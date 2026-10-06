@@ -22,7 +22,9 @@ export interface VideoSearchResponse {
   data: VideoSearchResult[];
 }
 
-const API_BASE = 'http://localhost:5000/api';
+import { getApiUrl } from '../config/api';
+
+const API_BASE = getApiUrl('/api');
 
 export async function searchVideosApi(
   query: string,

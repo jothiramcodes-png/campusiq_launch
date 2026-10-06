@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getLocalStoredVideos, fetchAllVideos } from '../../lib/videoStore';
+import { DashboardToggle } from '../../components/common/DashboardToggle';
 import {
   Video,
   Upload,
@@ -28,9 +29,14 @@ export const AdminDashboard: React.FC = () => {
       
       {/* Admin Header */}
       <div className="p-6 sm:p-10 rounded-3xl bg-gradient-to-r from-[#173B2F] via-[#285443] to-[#101815] text-white shadow-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#C49A55] uppercase tracking-wider mb-2">
-          <Sparkles className="w-3.5 h-3.5 text-[#C49A55]" />
-          <span>Video Lecture Administration Portal</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#C49A55] uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-[#C49A55]" />
+            <span>Video Lecture Administration Portal</span>
+          </div>
+
+          {/* Dashboard View Toggle */}
+          <DashboardToggle current="admin" />
         </div>
         <h1 className="text-2xl sm:text-4xl font-black text-white">
           Department Video Management

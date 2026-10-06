@@ -6,8 +6,9 @@ import {
   CourseCertificate,
 } from '../types';
 import localCoursesData from '../data/coursesData.json';
+import { getApiUrl } from '../config/api';
 
-const API_BASE = 'http://localhost:5000/api/curriculum';
+const API_BASE = getApiUrl('/api/curriculum');
 
 export interface CourseDetailResponse {
   course: ModularCourse;

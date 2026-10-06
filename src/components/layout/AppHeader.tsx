@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { DashboardToggle } from '../common/DashboardToggle';
 import {
   ChevronDown,
   UserCheck,
@@ -75,6 +76,11 @@ export const AppHeader: React.FC = () => {
 
         {/* Right: Actions & Persona */}
         <div className="flex items-center gap-2 sm:gap-3">
+
+          {/* Header Quick Dashboard Switcher */}
+          <div className="hidden md:flex items-center">
+            <DashboardToggle variant="header" />
+          </div>
 
 
           {/* Persona Switcher Quick Pill */}

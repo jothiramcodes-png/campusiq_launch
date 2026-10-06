@@ -3,6 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import { pool, isDbConnected, ensureDbConnection } from '../config/db';
 import { extract1sThumbnail } from '../utils/thumbnailGenerator';
+import {
+  saveVideoToSqlite,
+  updateVideoInSqlite,
+  deleteVideoFromSqlite,
+  incrementViewCountInSqlite,
+  getVideosFromSqlite,
+  getVideoByIdFromSqlite,
+} from '../config/sqlite';
 
 // In-memory fallback matching the user's manual local videos
 let fallbackVideos: any[] = [];
@@ -37,7 +45,7 @@ export const listVideos = async (req: Request, res: Response): Promise<void> => 
       queryStr += ' ORDER BY created_at DESC';
       const [rows]: any = await pool.query(queryStr, params);
 
-      if (Array.isArray(rows)) {
+      if (Array.isArray(rows) && rows.length > 0) {
         const formatted = rows.map((r: any) => ({
           id: r.id,
           youtubeId: r.youtube_id || '',
@@ -65,7 +73,20 @@ export const listVideos = async (req: Request, res: Response): Promise<void> => 
       }
     }
   } catch (err) {
-    console.warn('[videoController] MySQL query failed, falling back to in-memory:', err);
+    console.warn('[videoController] MySQL query failed, falling back to SQLite:', err);
+  }
+
+  // Fallback to SQLite store
+  const sqliteVideos = getVideosFromSqlite({
+    department: department as string,
+    semester: semester ? Number(semester) : undefined,
+    unit: unit ? Number(unit) : undefined,
+    search: search as string,
+  });
+
+  if (sqliteVideos.length > 0) {
+    res.json({ count: sqliteVideos.length, data: sqliteVideos });
+    return;
   }
 
   // Fallback to in-memory store
@@ -92,7 +113,7 @@ export const listVideos = async (req: Request, res: Response): Promise<void> => 
 };
 
 export const getVideoById = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = String(req.params.id);
 
   try {
     await ensureDbConnection();
@@ -126,7 +147,14 @@ export const getVideoById = async (req: Request, res: Response): Promise<void> =
       }
     }
   } catch (err) {
-    console.warn('[videoController] MySQL getVideoById failed, falling back:', err);
+    console.warn('[videoController] MySQL getVideoById failed, checking SQLite:', err);
+  }
+
+  // Fallback to SQLite
+  const sqliteVideo = getVideoByIdFromSqlite(id);
+  if (sqliteVideo) {
+    res.json(sqliteVideo);
+    return;
   }
 
   const video = fallbackVideos.find(v => v.id === id);
@@ -282,6 +310,14 @@ export const createVideo = async (req: Request, res: Response): Promise<void> =>
       console.log('✅ [MySQL] Inserted new video with transcript into MySQL:', newVideo.id);
     }
 
+    // Save to SQLite (Dual Persistence)
+    try {
+      saveVideoToSqlite(newVideo);
+      console.log('✅ [SQLite] Inserted new video into SQLite database:', newVideo.id);
+    } catch (sqliteErr: any) {
+      console.error('⚠️ [SQLite] Failed to insert video into SQLite:', sqliteErr.message);
+    }
+
     // Also update in-memory fallback
     fallbackVideos.unshift(newVideo);
 
@@ -396,6 +432,26 @@ export const updateVideo = async (req: Request, res: Response): Promise<void> =>
       console.log('✅ [MySQL] Updated video in MySQL:', id);
     }
 
+    // Update in SQLite
+    try {
+      updateVideoInSqlite(id, {
+        title: updatedTitle,
+        topic: updatedTitle,
+        facultyName: updatedFaculty,
+        departmentCode: updatedDept,
+        academicYear: updatedYear,
+        description: updatedDesc,
+        localVideoPath: updatedLocalVideoPath,
+        thumbnailUrl: updatedThumbnailUrl,
+        studyMaterialUrl: updatedStudyMaterialUrl,
+        durationSeconds: updatedDuration,
+        transcript: updatedTranscript,
+      });
+      console.log('✅ [SQLite] Updated video in SQLite:', id);
+    } catch (sqliteErr: any) {
+      console.error('⚠️ [SQLite] Error updating video in SQLite:', sqliteErr.message);
+    }
+
     const updatedVideoObj = {
       id,
       youtubeId: currentVideo.youtube_id || currentVideo.youtubeId || '',
@@ -450,6 +506,14 @@ export const deleteVideo = async (req: Request, res: Response): Promise<void> =>
       console.log('✅ [MySQL] Deleted video from MySQL:', id);
     }
 
+    // Delete from SQLite
+    try {
+      deleteVideoFromSqlite(id);
+      console.log('✅ [SQLite] Deleted video from SQLite:', id);
+    } catch (sqliteErr: any) {
+      console.error('⚠️ [SQLite] Error deleting video from SQLite:', sqliteErr.message);
+    }
+
     const fallbackVid = fallbackVideos.find((v) => v.id === id);
     if (fallbackVid) {
       if (fallbackVid.localVideoPath) filesToDelete.push(fallbackVid.localVideoPath);
@@ -498,13 +562,23 @@ export const incrementViewCount = async (req: Request, res: Response): Promise<v
       console.log(`✅ [MySQL] Incremented view count for video ${id} -> ${currentViews}`);
     }
 
+    // Increment in SQLite
+    try {
+      const sqliteViews = incrementViewCountInSqlite(id);
+      if (!isDbConnected && sqliteViews > 0) {
+        currentViews = sqliteViews;
+      }
+    } catch (sqliteErr: any) {
+      console.error('⚠️ [SQLite] Error incrementing views in SQLite:', sqliteErr.message);
+    }
+
     const fallbackIndex = fallbackVideos.findIndex(v => v.id === id);
     if (fallbackIndex !== -1) {
       fallbackVideos[fallbackIndex].viewCount = (fallbackVideos[fallbackIndex].viewCount || 0) + 1;
-      if (!isDbConnected) {
+      if (!isDbConnected && currentViews === 1) {
         currentViews = fallbackVideos[fallbackIndex].viewCount;
       }
-    } else if (!isDbConnected) {
+    } else if (!isDbConnected && currentViews === 1) {
       currentViews = viewCountsMap.get(id)!;
     }
 
@@ -562,9 +636,19 @@ export const syncVideos = async (req: Request, res: Response): Promise<void> => 
       }
     }
 
+    // Mirror to SQLite
+    try {
+      for (const v of videos) {
+        saveVideoToSqlite(v);
+      }
+      console.log(`✅ [SQLite] Synced ${videos.length} videos into SQLite`);
+    } catch (sqliteErr: any) {
+      console.error('⚠️ [SQLite] Error syncing videos to SQLite:', sqliteErr.message);
+    }
+
     res.json({ success: true, count: videos.length });
   } catch (error: any) {
-    console.error('Error syncing videos to MySQL:', error);
+    console.error('Error syncing videos:', error);
     res.status(500).json({ error: 'Failed to sync videos', details: error.message });
   }
 };

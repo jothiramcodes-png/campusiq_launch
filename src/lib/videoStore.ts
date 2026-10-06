@@ -1,5 +1,6 @@
 import { Video } from '../types';
 import { generateAutomaticTranscript } from './transcriptParser';
+import { getApiUrl } from '../config/api';
 
 const STORAGE_KEY = 'campusiq_uploaded_videos';
 
@@ -39,7 +40,7 @@ export const saveVideosToLocalStorage = (videos: Video[], forceDispatch = false)
 // Fetch videos directly from backend MySQL API and synchronize immediately with frontend state
 export const fetchAllVideos = async (): Promise<Video[]> => {
   try {
-    const res = await fetch('/api/videos');
+    const res = await fetch(getApiUrl('/api/videos'));
     if (res.ok) {
       const json = await res.json();
       if (json && Array.isArray(json.data)) {
@@ -98,7 +99,7 @@ export const deleteVideoAndPersist = async (id: string): Promise<boolean> => {
 
   // 2. Call backend DELETE endpoint to remove from MySQL and disk
   try {
-    const res = await fetch(`/api/videos/${id}`, { method: 'DELETE' });
+    const res = await fetch(getApiUrl(`/api/videos/${id}`), { method: 'DELETE' });
     if (!res.ok) {
       console.warn('[videoStore] Failed to delete video on backend, status:', res.status);
     }
@@ -127,7 +128,7 @@ export const recordVideoView = async (id: string): Promise<number> => {
 
   // 2. Synchronize with backend API & MySQL
   try {
-    const res = await fetch(`/api/videos/${id}/view`, { method: 'POST' });
+    const res = await fetch(getApiUrl(`/api/videos/${id}/view`), { method: 'POST' });
     if (res.ok) {
       const json = await res.json();
       if (json && typeof json.viewCount === 'number') {
@@ -199,7 +200,7 @@ export const uploadAndPersistVideo = async (
         formData.append('transcript', JSON.stringify(finalTranscript));
       }
     }
-    const res = await fetch('/api/videos/upload', {
+    const res = await fetch(getApiUrl('/api/videos/upload'), {
       method: 'POST',
       body: formData,
     });
@@ -294,7 +295,7 @@ export const updateAndPersistVideo = async (
       formData.append('description', metadata.description);
     }
 
-    const res = await fetch(`/api/videos/${id}`, {
+    const res = await fetch(getApiUrl(`/api/videos/${id}`), {
       method: 'PUT',
       body: formData,
     });

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: campusiq-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: campusiq_super_secret_jwt_key_2026
+      - key: PII_SALT
+        value: nscet_theni_immutable_cryptographic_salt_2026

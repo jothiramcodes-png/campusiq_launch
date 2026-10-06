@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getLocalStoredVideos, fetchAllVideos } from '../../lib/videoStore';
 import { VideoCard } from '../../components/video/VideoCard';
+import { DashboardToggle } from '../../components/common/DashboardToggle';
 import { Video as VideoType } from '../../types';
 import {
   Search,
@@ -49,10 +50,15 @@ export const StudentDashboard: React.FC = () => {
       <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#173B2F] via-[#20493B] to-[#101815] text-white p-6 sm:p-10 shadow-xl border border-white/10">
         <div className="absolute -right-10 -bottom-10 w-80 h-80 rounded-full bg-[#C49A55]/15 blur-3xl pointer-events-none" />
         
-        <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#C49A55] uppercase tracking-wider">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Learning Portal • Semester {currentUser?.semester || 5}</span>
+        <div className="relative z-10 max-w-4xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#C49A55] uppercase tracking-wider">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Learning Portal • Semester {currentUser?.semester || 5}</span>
+            </div>
+
+            {/* Dashboard View Toggle */}
+            <DashboardToggle current="student" />
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">

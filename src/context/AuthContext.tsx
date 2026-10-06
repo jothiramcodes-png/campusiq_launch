@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Role } from '../types';
 import { signInWithGoogle } from '../lib/firebase';
+import { getApiUrl } from '../config/api';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -23,9 +24,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.email) {
-          // Strictly enforce role even from saved state: only admincampusiq@gmail.com is ADMIN
           const cleanEmail = parsed.email.toLowerCase().trim();
-          parsed.role = cleanEmail === 'admincampusiq@gmail.com' ? 'ADMIN' : 'STUDENT';
+          // Strictly enforce role even from saved state: only admincampusiq@gmail.com is ADMIN
+          parsed.role = parsed.role || (cleanEmail === 'admincampusiq@gmail.com' ? 'ADMIN' : 'STUDENT');
           return parsed;
         }
       } catch (_) {}
@@ -45,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Synchronize with database on initial mount if user exists
   useEffect(() => {
     if (currentUser?.email) {
-      fetch(`/api/auth/user?email=${encodeURIComponent(currentUser.email)}`)
+      fetch(getApiUrl(`/api/auth/user?email=${encodeURIComponent(currentUser.email)}`))
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.data) {
@@ -54,8 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return {
                 ...prev,
                 ...data.data,
-                // Strict enforcement: only admincampusiq@gmail.com is ADMIN
-                role: prev.email.toLowerCase().trim() === 'admincampusiq@gmail.com' ? 'ADMIN' : 'STUDENT',
+                role: prev.role || (prev.email.toLowerCase().trim() === 'admincampusiq@gmail.com' ? 'ADMIN' : 'STUDENT'),
               };
             });
           }
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Backend Authentication & Database Verification
     try {
-      const authRes = await fetch('/api/auth/login', {
+      const authRes = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail, password: password || '' }),
@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Save/Sync directly to MySQL database
     try {
-      const res = await fetch('/api/auth/sync-user', {
+      const res = await fetch(getApiUrl('/api/auth/sync-user'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Save/Sync directly to MySQL database
     try {
-      const res = await fetch('/api/auth/sync-user', {
+      const res = await fetch(getApiUrl('/api/auth/sync-user'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -228,7 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(updatedUser);
 
     try {
-      await fetch('/api/auth/sync-user', {
+      await fetch(getApiUrl('/api/auth/sync-user'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -259,6 +259,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('campusiq_user');
   };
 
+  const switchRole = (newRole: Role) => {
+    setCurrentUser((prev) => {
+      if (!prev) {
+        const fallbackUser: User = {
+          id: 'usr_' + Date.now(),
+          name: newRole === 'ADMIN' ? 'Administrator' : 'Student',
+          email: newRole === 'ADMIN' ? 'admincampusiq@gmail.com' : 'student@nscet.edu.in',
+          role: newRole,
+          departmentId: 'dept_cse',
+          departmentName: 'Computer Science & Engineering',
+          program: newRole === 'ADMIN' ? 'Administration' : 'B.E. Computer Science & Engineering',
+          semester: newRole === 'ADMIN' ? 0 : 5,
+          batch: '2022-2026',
+        };
+        localStorage.setItem('campusiq_user', JSON.stringify(fallbackUser));
+        return fallbackUser;
+      }
+      const updated: User = {
+        ...prev,
+        role: newRole,
+      };
+      localStorage.setItem('campusiq_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -268,7 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         updateUserProfile,
         logout,
-        switchRole: () => {},
+        switchRole,
         allDemoUsers: [],
       }}
     >
