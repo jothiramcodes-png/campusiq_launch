@@ -15,11 +15,13 @@ async function run() {
 
   if (!isCloudinaryConfigured) {
     console.error('❌ Error: Cloudinary is not configured!');
-    console.error('Please add the following keys to your backend/.env file:');
-    console.error('  CLOUDINARY_CLOUD_NAME=your_cloud_name');
-    console.error('  CLOUDINARY_API_KEY=your_api_key');
-    console.error('  CLOUDINARY_API_SECRET=your_api_secret');
-    console.error('\nGet your free credentials at: https://cloudinary.com/console');
+    console.error('Please add your Cloudinary credentials to backend/.env:');
+    console.error('  CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@ztuchlmk');
+    console.error('or:');
+    console.error('  CLOUDINARY_CLOUD_NAME=ztuchlmk');
+    console.error('  CLOUDINARY_API_KEY=<your_api_key>');
+    console.error('  CLOUDINARY_API_SECRET=<your_api_secret>');
+    console.error('\nCopy the API key & Secret from: https://cloudinary.com/console');
     process.exit(1);
   }
 
